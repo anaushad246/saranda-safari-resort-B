@@ -68,15 +68,9 @@ function normalizePricingPayload(body) {
         updateFields.pricingTiersPaise[k] = null;
       } else {
         const num = Number(v);
-        if (num < 10000) {
-          // Passed as Rupees (e.g. 3500)
-          updateFields.pricingTiers[k] = num;
-          updateFields.pricingTiersPaise[k] = Math.round(num * 100);
-        } else {
-          // Passed as Paise (e.g. 350000)
-          updateFields.pricingTiersPaise[k] = num;
-          updateFields.pricingTiers[k] = Math.round(num / 100);
-        }
+        // Explicitly in Paise
+        updateFields.pricingTiersPaise[k] = num;
+        updateFields.pricingTiers[k] = Math.round(num / 100);
       }
     }
   }
@@ -101,13 +95,9 @@ function normalizePricingPayload(body) {
     updateFields.campingRatesPaise = {};
     for (const [k, v] of Object.entries(campingRatesPaise)) {
       const num = Number(v);
-      if (num < 10000) {
-        updateFields.campingRates[k] = num;
-        updateFields.campingRatesPaise[k] = Math.round(num * 100);
-      } else {
-        updateFields.campingRatesPaise[k] = num;
-        updateFields.campingRates[k] = Math.round(num / 100);
-      }
+      // Explicitly in Paise
+      updateFields.campingRatesPaise[k] = num;
+      updateFields.campingRates[k] = Math.round(num / 100);
     }
   }
 

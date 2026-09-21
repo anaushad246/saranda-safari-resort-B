@@ -144,7 +144,7 @@ export function calculatePriceQuote({
       advancePayable: advancePayablePaise,
       balanceDue: balanceDuePaise
     },
-    rupees: {
+    inr: {
       baseRatePerNight: Math.round(baseRatePerNightPaise / 100),
       baseStayTotal: Math.round(baseStayTotalPaise / 100),
       childrenTotal: Math.round(childrenTotalPaise / 100),
