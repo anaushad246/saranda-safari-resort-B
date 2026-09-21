@@ -36,7 +36,25 @@ export function normalizeStayTimestamps(checkInDateStr, checkOutDateStr, isCampi
  * existing.start < requested.end && requested.start < existing.end
  */
 export async function checkUnitAvailability(unitId, checkInDate, checkOutDate) {
-  // 1. Check for conflicting active bookings
+  // 1. Verify Unit status (Maintenance / Renovation / Private Block)
+  const unit = await Unit.findById(unitId);
+  if (!unit) {
+    return {
+      available: false,
+      conflictType: 'not_found',
+      reason: 'Unit does not exist.'
+    };
+  }
+
+  if (unit.status !== 'active') {
+    return {
+      available: false,
+      conflictType: 'unit_status',
+      reason: `Unit is currently unavailable due to ${unit.status.replace('_', ' ')}.`
+    };
+  }
+
+  // 2. Check for conflicting active bookings
   const conflictingBooking = await Booking.findOne({
     unit: unitId,
     bookingStatus: { $in: ['confirmed', 'checked_in'] },
@@ -52,7 +70,7 @@ export async function checkUnitAvailability(unitId, checkInDate, checkOutDate) {
     };
   }
 
-  // 2. Check for manual admin blocks (unit-specific OR whole-property)
+  // 3. Check for manual admin blocks (unit-specific OR whole-property)
   const conflictingBlock = await BlockedDate.findOne({
     $or: [
       { unit: unitId },
@@ -78,27 +96,62 @@ export async function checkUnitAvailability(unitId, checkInDate, checkOutDate) {
 }
 
 /**
- * Returns all active units with their availability status for the given dates.
+ * Returns all units with their availability status for the given dates.
+ * Considers unit.status ('active' vs 'maintenance'/'renovation'), capacity limit, active bookings and date blocks.
  */
 export async function getAllUnitsAvailability(checkInDateStr, checkOutDateStr, requestedAdults = 1) {
-  const units = await Unit.find({ status: { $ne: 'renovation' } }).sort({ code: 1 });
+  const units = await Unit.find().sort({ code: 1 });
+  const cottageTimestamps = normalizeStayTimestamps(checkInDateStr, checkOutDateStr, false);
+  const campingTimestamps = normalizeStayTimestamps(checkInDateStr, checkOutDateStr, true);
+
+  // Fetch all overlapping bookings & blocks concurrently to optimize performance
+  const [overlappingBookings, overlappingBlocks] = await Promise.all([
+    Booking.find({
+      bookingStatus: { $in: ['confirmed', 'checked_in'] },
+      checkIn: { $lt: cottageTimestamps.checkOut },
+      checkOut: { $gt: cottageTimestamps.checkIn }
+    }).select('unit checkIn checkOut'),
+    BlockedDate.find({
+      startDate: { $lt: cottageTimestamps.checkOut },
+      endDate: { $gt: cottageTimestamps.checkIn }
+    }).select('unit startDate endDate reason')
+  ]);
+
+  const bookedUnitIdSet = new Set(overlappingBookings.map(b => String(b.unit)));
+  const wholePropertyBlock = overlappingBlocks.find(b => !b.unit);
+  const blockedUnitMap = new Map();
+  overlappingBlocks.forEach(b => {
+    if (b.unit) blockedUnitMap.set(String(b.unit), b.reason);
+  });
+
   const results = [];
 
   for (const unit of units) {
     const isCamping = unit.unitType === 'camping_tent';
-    const { checkIn, checkOut } = normalizeStayTimestamps(checkInDateStr, checkOutDateStr, isCamping);
+    const { checkIn, checkOut } = isCamping ? campingTimestamps : cottageTimestamps;
 
-    // Check capacity first
+    let isOperational = unit.status === 'active';
+    let statusNotice = isOperational ? null : `Unit is currently under ${unit.status.replace('_', ' ')}.`;
+
+    // Capacity validation
     let capacityAllowed = true;
     let capacityNotice = null;
-
     if (requestedAdults > unit.maxAdults) {
       capacityAllowed = false;
       capacityNotice = `Maximum capacity is ${unit.maxAdults} adults.`;
     }
 
-    // Check schedule conflicts
-    const scheduleCheck = await checkUnitAvailability(unit._id, checkIn, checkOut);
+    // Schedule conflict evaluation
+    let scheduleConflict = null;
+    if (wholePropertyBlock) {
+      scheduleConflict = `Resort is closed for ${wholePropertyBlock.reason.replace('_', ' ')}.`;
+    } else if (blockedUnitMap.has(String(unit._id))) {
+      scheduleConflict = `Unit is blocked for ${blockedUnitMap.get(String(unit._id)).replace('_', ' ')}.`;
+    } else if (bookedUnitIdSet.has(String(unit._id))) {
+      scheduleConflict = 'Unit is already booked for these dates.';
+    }
+
+    const isAvailable = isOperational && capacityAllowed && !scheduleConflict;
 
     results.push({
       unit: {
@@ -113,8 +166,8 @@ export async function getAllUnitsAvailability(checkInDateStr, checkOutDateStr, r
       },
       checkInTimestamp: checkIn.toISOString(),
       checkOutTimestamp: checkOut.toISOString(),
-      isAvailable: scheduleCheck.available && capacityAllowed,
-      scheduleConflict: scheduleCheck.reason,
+      isAvailable,
+      scheduleConflict: statusNotice || scheduleConflict,
       capacityAllowed,
       capacityNotice
     });

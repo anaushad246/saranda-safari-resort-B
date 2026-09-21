@@ -27,17 +27,23 @@ export function calculatePriceQuote({
   const isCamping = effectiveUnitType === 'camping_tent';
 
   // 1. Strict Unit-Type Capacity Guard
-  if (effectiveUnitType === 'red_white_cottage' || effectiveUnitType === 'cherry_blossom' || effectiveUnitType === 'gulmohar') {
+  const isCherryBlossomOrGulmohar = 
+    effectiveUnitType === 'red_white_cottage' || 
+    unit?.code?.startsWith('CB-') || 
+    unit?.code?.startsWith('GM-');
+
+  if (isCherryBlossomOrGulmohar) {
     if (parsedAdults > 3) {
       throw new Error('Capacity limitation: Cherry Blossom and Gulmohar strictly allow a maximum of 3 adults. For 4 adults, please select Riverwood, Autumn Abode, Spring Abode, or Amberwood.');
-    }
-  } else if (effectiveUnitType === 'wooden_log_house' || effectiveUnitType === 'other_cottage' || effectiveUnitType === 'riverwood' || effectiveUnitType === 'autumn_abode' || effectiveUnitType === 'spring_abode' || effectiveUnitType === 'amberwood') {
-    if (parsedAdults > 4) {
-      throw new Error('Capacity limitation: This unit allows a maximum of 4 adults.');
     }
   } else if (isCamping) {
     if (parsedAdults > 5) {
       throw new Error('Camping capacity limitation: Maximum 5 overnight guests across the 2 camping tents.');
+    }
+  } else {
+    // 4-person cottages (Riverwood, Autumn Abode, Spring Abode, Amberwood)
+    if (parsedAdults > 4) {
+      throw new Error('Capacity limitation: This cottage allows a maximum of 4 adults.');
     }
   }
 
@@ -57,17 +63,16 @@ export function calculatePriceQuote({
       baseRatePerNightPaise = parsedAdults * perPersonRate;
     }
   } else {
-    // Cottage rates: check unit.pricingTiers (Rupees) or unit.pricingTiersPaise (Paise)
-    const tiersRupees = unit?.pricingTiers || {};
+    // Cottage rates: check unit.pricingTiersPaise or unit.pricingTiers
     const tiersPaise = unit?.pricingTiersPaise || {};
+    const tiersRupees = unit?.pricingTiers || {};
 
     const getTierPaise = (tierKey, defaultRupees) => {
+      if (tiersPaise[tierKey] !== undefined && tiersPaise[tierKey] !== null) {
+        return Math.round(Number(tiersPaise[tierKey]));
+      }
       if (tiersRupees[tierKey] !== undefined && tiersRupees[tierKey] !== null) {
         return Math.round(Number(tiersRupees[tierKey]) * 100);
-      }
-      if (tiersPaise[tierKey] !== undefined && tiersPaise[tierKey] !== null) {
-        const val = Number(tiersPaise[tierKey]);
-        return val < 10000 ? Math.round(val * 100) : val;
       }
       return defaultRupees * 100;
     };
@@ -79,8 +84,7 @@ export function calculatePriceQuote({
     } else if (parsedAdults === 3) {
       baseRatePerNightPaise = getTierPaise('threeAdults', 5400); // ₹5,400
     } else if (parsedAdults === 4) {
-      // Quad occupancy only allowed on log house and other cottage
-      if (effectiveUnitType === 'wooden_log_house' || effectiveUnitType === 'other_cottage') {
+      if (!isCherryBlossomOrGulmohar) {
         baseRatePerNightPaise = getTierPaise('fourAdults', 6600); // ₹6,600
       } else {
         throw new Error('4-guest rate is not permitted on this unit type.');
@@ -140,15 +144,15 @@ export function calculatePriceQuote({
       advancePayable: advancePayablePaise,
       balanceDue: balanceDuePaise
     },
-    inr: {
-      baseRatePerNight: baseRatePerNightPaise / 100,
-      baseStayTotal: baseStayTotalPaise / 100,
-      childrenTotal: childrenTotalPaise / 100,
-      nonVegTotal: nonVegTotalPaise / 100,
-      bonfireTotal: bonfireTotalPaise / 100,
-      grandTotal: grandTotalPaise / 100,
-      advancePayable: advancePayablePaise / 100,
-      balanceDue: balanceDuePaise / 100
+    rupees: {
+      baseRatePerNight: Math.round(baseRatePerNightPaise / 100),
+      baseStayTotal: Math.round(baseStayTotalPaise / 100),
+      childrenTotal: Math.round(childrenTotalPaise / 100),
+      nonVegTotal: Math.round(nonVegTotalPaise / 100),
+      bonfireTotal: Math.round(bonfireTotalPaise / 100),
+      grandTotal: Math.round(grandTotalPaise / 100),
+      advancePayable: Math.round(advancePayablePaise / 100),
+      balanceDue: Math.round(balanceDuePaise / 100)
     }
   };
 }

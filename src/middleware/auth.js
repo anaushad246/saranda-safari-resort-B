@@ -1,6 +1,17 @@
 import jwt from 'jsonwebtoken';
 import { User } from '../models/User.js';
 
+export const getJwtSecret = () => {
+  const secret = process.env.JWT_SECRET;
+  if (!secret) {
+    if (process.env.NODE_ENV === 'production') {
+      throw new Error('FATAL SECURITY ERROR: JWT_SECRET environment variable is missing in production.');
+    }
+    return 'saranda_safari_resort_dev_jwt_secret_1998';
+  }
+  return secret;
+};
+
 export const protect = async (req, res, next) => {
   let token;
 
@@ -16,7 +27,8 @@ export const protect = async (req, res, next) => {
   }
 
   try {
-    const decoded = jwt.verify(token, process.env.JWT_SECRET || 'saranda_safari_resort_jwt_secret_key_1998_bolani_odisha');
+    const secret = getJwtSecret();
+    const decoded = jwt.verify(token, secret);
     const user = await User.findById(decoded.id).select('-password');
 
     if (!user || !user.isActive) {
@@ -41,7 +53,7 @@ export const authorize = (...roles) => {
     if (!req.user || !roles.includes(req.user.role)) {
       return res.status(403).json({
         success: false,
-        message: `User role '${req.user?.role}' is not authorized to access this action.`
+        message: `User role '${req.user?.role || 'unknown'}' is not authorized to perform this action.`
       });
     }
     next();

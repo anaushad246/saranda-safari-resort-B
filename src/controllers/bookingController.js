@@ -35,6 +35,11 @@ export const createBooking = asyncHandler(async (req, res) => {
   const isCamping = unit.unitType === 'camping_tent';
   const { checkIn, checkOut } = normalizeStayTimestamps(checkInDate, checkOutDate, isCamping);
 
+  // Strict Capacity Check
+  if (adults > unit.maxAdults) {
+    throw new ApiError(400, "Party exceeds unit capacity: " + unit.name + " accommodates maximum " + unit.maxAdults + " adults.");
+  }
+
   // 1. Availability check (half-open interval)
   const availability = await checkUnitAvailability(unit._id, checkIn, checkOut);
   if (!availability.available) {

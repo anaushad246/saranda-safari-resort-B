@@ -11,7 +11,8 @@ import unitRouter from './routes/unitRoutes.js';
 
 const app = express();
 
-const allowedOrigins = (process.env.CORS_ORIGIN || process.env.CLIENT_URL || 'http://localhost:5173')
+const rawAllowedOrigins = process.env.CORS_ORIGIN || process.env.CLIENT_URL || 'http://localhost:5173,http://localhost:5174';
+const allowedOrigins = rawAllowedOrigins
   .split(',')
   .map(o => o.trim().replace(/\/$/, '').toLowerCase())
   .filter(Boolean);
@@ -19,10 +20,13 @@ const allowedOrigins = (process.env.CORS_ORIGIN || process.env.CLIENT_URL || 'ht
 app.use(
   cors({
     origin: function (origin, callback) {
+      // Allow requests with no origin (like mobile apps, curl, or Postman)
       if (!origin) return callback(null, true);
       const clean = origin.replace(/\/$/, '').toLowerCase();
-      if (allowedOrigins.includes(clean) || allowedOrigins.includes('*')) return callback(null, true);
-      return callback(null, true);
+      if (allowedOrigins.includes(clean) || allowedOrigins.includes('*')) {
+        return callback(null, true);
+      }
+      return callback(new Error(`CORS policy violation: Origin '${origin}' is not authorized to access this API.`));
     },
     credentials: true
   })
@@ -58,9 +62,20 @@ app.use('/api/v1/blocks', blockRouter);
 app.use('/api/v1/enquiries', enquiryRouter);
 app.use('/api/v1/units', unitRouter);
 
+// 404 Route Catch-All Handler
+app.use((req, res, next) => {
+  res.status(404).json({
+    statusCode: 404,
+    success: false,
+    message: `Cannot find endpoint '${req.originalUrl}' on this server.`,
+    errors: [],
+    data: null
+  });
+});
+
 // Global Error Handler Middleware
 app.use((err, req, res, next) => {
-  const statusCode = err.statusCode || 500;
+  const statusCode = err.statusCode || (err.message && err.message.includes('CORS') ? 403 : 500);
   return res.status(statusCode).json({
     statusCode,
     success: false,

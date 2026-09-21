@@ -3,11 +3,12 @@ import { User } from '../models/User.js';
 import { asyncHandler } from '../utils/asyncHandler.js';
 import { ApiError } from '../utils/ApiError.js';
 import { ApiResponse } from '../utils/ApiResponse.js';
+import { getJwtSecret } from '../middleware/auth.js';
 
 const generateToken = (id) => {
   return jwt.sign(
     { id },
-    process.env.JWT_SECRET || 'saranda_safari_resort_jwt_secret_key_1998_bolani_odisha',
+    getJwtSecret(),
     { expiresIn: '7d' }
   );
 };
