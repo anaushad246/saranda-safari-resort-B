@@ -27,11 +27,11 @@ export function calculatePriceQuote({
   const isCamping = effectiveUnitType === 'camping_tent';
 
   // 1. Strict Unit-Type Capacity Guard
-  if (effectiveUnitType === 'red_white_cottage') {
+  if (effectiveUnitType === 'red_white_cottage' || effectiveUnitType === 'cherry_blossom' || effectiveUnitType === 'gulmohar') {
     if (parsedAdults > 3) {
-      throw new Error('Capacity limitation: Red-and-White cottages strictly allow a maximum of 3 adults. For 4 adults, please select the Wooden Log House or Other cottage.');
+      throw new Error('Capacity limitation: Cherry Blossom and Gulmohar strictly allow a maximum of 3 adults. For 4 adults, please select Riverwood, Autumn Abode, Spring Abode, or Amberwood.');
     }
-  } else if (effectiveUnitType === 'wooden_log_house' || effectiveUnitType === 'other_cottage') {
+  } else if (effectiveUnitType === 'wooden_log_house' || effectiveUnitType === 'other_cottage' || effectiveUnitType === 'riverwood' || effectiveUnitType === 'autumn_abode' || effectiveUnitType === 'spring_abode' || effectiveUnitType === 'amberwood') {
     if (parsedAdults > 4) {
       throw new Error('Capacity limitation: This unit allows a maximum of 4 adults.');
     }
@@ -57,18 +57,31 @@ export function calculatePriceQuote({
       baseRatePerNightPaise = parsedAdults * perPersonRate;
     }
   } else {
-    // Cottage rates (from unit document if available, otherwise defaults)
-    const tiers = unit?.pricingTiersPaise || {};
+    // Cottage rates: check unit.pricingTiers (Rupees) or unit.pricingTiersPaise (Paise)
+    const tiersRupees = unit?.pricingTiers || {};
+    const tiersPaise = unit?.pricingTiersPaise || {};
+
+    const getTierPaise = (tierKey, defaultRupees) => {
+      if (tiersRupees[tierKey] !== undefined && tiersRupees[tierKey] !== null) {
+        return Math.round(Number(tiersRupees[tierKey]) * 100);
+      }
+      if (tiersPaise[tierKey] !== undefined && tiersPaise[tierKey] !== null) {
+        const val = Number(tiersPaise[tierKey]);
+        return val < 10000 ? Math.round(val * 100) : val;
+      }
+      return defaultRupees * 100;
+    };
+
     if (parsedAdults === 1) {
-      baseRatePerNightPaise = tiers.oneAdult ?? 300000; // ₹3,000
+      baseRatePerNightPaise = getTierPaise('oneAdult', 3000); // ₹3,000
     } else if (parsedAdults === 2) {
-      baseRatePerNightPaise = tiers.twoAdults ?? 400000; // ₹4,000
+      baseRatePerNightPaise = getTierPaise('twoAdults', 4000); // ₹4,000
     } else if (parsedAdults === 3) {
-      baseRatePerNightPaise = tiers.threeAdults ?? 540000; // ₹5,400
+      baseRatePerNightPaise = getTierPaise('threeAdults', 5400); // ₹5,400
     } else if (parsedAdults === 4) {
       // Quad occupancy only allowed on log house and other cottage
       if (effectiveUnitType === 'wooden_log_house' || effectiveUnitType === 'other_cottage') {
-        baseRatePerNightPaise = tiers.fourAdults ?? 660000; // ₹6,600
+        baseRatePerNightPaise = getTierPaise('fourAdults', 6600); // ₹6,600
       } else {
         throw new Error('4-guest rate is not permitted on this unit type.');
       }

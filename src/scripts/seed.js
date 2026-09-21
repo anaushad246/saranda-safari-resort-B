@@ -9,105 +9,120 @@ dotenv.config();
 const unitsData = [
   {
     code: 'RW-01',
-    name: 'Red-and-White Cottage 1',
-    unitType: 'red_white_cottage',
-    maxAdults: 3,
-    minAdults: 1,
-    bedConfiguration: 'Double bed + extra cot',
-    bathroomType: 'attached_western',
-    status: 'active',
-    pricingTiersPaise: {
-      oneAdult: 300000,
-      twoAdults: 400000,
-      threeAdults: 540000,
-      fourAdults: null // Strictly disallowed
-    },
-    features: ['Attached western bathroom', 'Hot water on request', 'Spacious verandah', 'Electricity & ceiling fans']
-  },
-  {
-    code: 'RW-02',
-    name: 'Red-and-White Cottage 2',
-    unitType: 'red_white_cottage',
-    maxAdults: 3,
-    minAdults: 1,
-    bedConfiguration: 'Double bed + extra cot',
-    bathroomType: 'attached_western',
-    status: 'active',
-    pricingTiersPaise: {
-      oneAdult: 300000,
-      twoAdults: 400000,
-      threeAdults: 540000,
-      fourAdults: null
-    },
-    features: ['Attached western bathroom', 'Hot water on request', 'Spacious verandah', 'Electricity & ceiling fans']
-  },
-  {
-    code: 'RW-03',
-    name: 'Red-and-White Cottage 3',
-    unitType: 'red_white_cottage',
-    maxAdults: 3,
-    minAdults: 1,
-    bedConfiguration: 'Double bed + extra cot',
-    bathroomType: 'attached_western',
-    status: 'active',
-    pricingTiersPaise: {
-      oneAdult: 300000,
-      twoAdults: 400000,
-      threeAdults: 540000,
-      fourAdults: null
-    },
-    features: ['Attached western bathroom', 'Hot water on request', 'Spacious verandah', 'Electricity & ceiling fans']
-  },
-  {
-    code: 'RW-04',
-    name: 'Red-and-White Cottage 4',
-    unitType: 'red_white_cottage',
-    maxAdults: 3,
-    minAdults: 1,
-    bedConfiguration: 'Double bed + extra cot',
-    bathroomType: 'attached_western',
-    status: 'active',
-    pricingTiersPaise: {
-      oneAdult: 300000,
-      twoAdults: 400000,
-      threeAdults: 540000,
-      fourAdults: null
-    },
-    features: ['Attached western bathroom', 'Hot water on request', 'Spacious verandah', 'Electricity & ceiling fans']
-  },
-  {
-    code: 'LOG-01',
-    name: 'Wooden Log House',
+    name: 'Riverwood',
     unitType: 'wooden_log_house',
     maxAdults: 4,
     minAdults: 1,
     bedConfiguration: 'Double bed + two timber twin beds',
     bathroomType: 'attached_western',
     status: 'active',
-    pricingTiersPaise: {
-      oneAdult: 300000,
-      twoAdults: 400000,
-      threeAdults: 540000,
-      fourAdults: 660000 // Valid on log house
-    },
-    features: ['Authentic natural timber poles', 'Attached western bathroom', 'Hot water on request', 'Large wooden verandah']
+    pricingTiers: { oneAdult: 3000, twoAdults: 4000, threeAdults: 5400, fourAdults: 6600 },
+    pricingTiersPaise: { oneAdult: 300000, twoAdults: 400000, threeAdults: 540000, fourAdults: 660000 },
+    features: ['Authentic natural timber poles', 'Attached western bathroom', 'Hot water on request', 'River-facing veranda']
   },
   {
-    code: 'OTHER-01',
-    name: 'Other cottage',
+    code: 'CB-01',
+    name: 'Cherry Blossom 1',
+    unitType: 'red_white_cottage',
+    maxAdults: 3,
+    minAdults: 1,
+    bedConfiguration: 'Double bed + extra cot',
+    bathroomType: 'attached_western',
+    status: 'active',
+    pricingTiers: { oneAdult: 3000, twoAdults: 4000, threeAdults: 5400, fourAdults: null },
+    pricingTiersPaise: { oneAdult: 300000, twoAdults: 400000, threeAdults: 540000, fourAdults: null },
+    features: ['Direct Karo River view', 'Attached western bathroom', 'Graceful arched veranda', 'Electricity & ceiling fans']
+  },
+  {
+    code: 'CB-02',
+    name: 'Cherry Blossom 2',
+    unitType: 'red_white_cottage',
+    maxAdults: 3,
+    minAdults: 1,
+    bedConfiguration: 'Double bed + extra cot',
+    bathroomType: 'attached_western',
+    status: 'active',
+    pricingTiers: { oneAdult: 3000, twoAdults: 4000, threeAdults: 5400, fourAdults: null },
+    pricingTiersPaise: { oneAdult: 300000, twoAdults: 400000, threeAdults: 540000, fourAdults: null },
+    features: ['Direct Karo River view', 'Attached western bathroom', 'Graceful arched veranda', 'Electricity & ceiling fans']
+  },
+  {
+    code: 'CB-03',
+    name: 'Cherry Blossom 3',
+    unitType: 'red_white_cottage',
+    maxAdults: 3,
+    minAdults: 1,
+    bedConfiguration: 'Double bed + extra cot',
+    bathroomType: 'attached_western',
+    status: 'active',
+    pricingTiers: { oneAdult: 3000, twoAdults: 4000, threeAdults: 5400, fourAdults: null },
+    pricingTiersPaise: { oneAdult: 300000, twoAdults: 400000, threeAdults: 540000, fourAdults: null },
+    features: ['Direct Karo River view', 'Attached western bathroom', 'Graceful arched veranda', 'Electricity & ceiling fans']
+  },
+  {
+    code: 'CB-04',
+    name: 'Cherry Blossom 4',
+    unitType: 'red_white_cottage',
+    maxAdults: 3,
+    minAdults: 1,
+    bedConfiguration: 'Double bed + extra cot',
+    bathroomType: 'attached_western',
+    status: 'active',
+    pricingTiers: { oneAdult: 3000, twoAdults: 4000, threeAdults: 5400, fourAdults: null },
+    pricingTiersPaise: { oneAdult: 300000, twoAdults: 400000, threeAdults: 540000, fourAdults: null },
+    features: ['Direct Karo River view', 'Attached western bathroom', 'Graceful arched veranda', 'Electricity & ceiling fans']
+  },
+  {
+    code: 'AA-01',
+    name: 'Autumn Abode 1',
     unitType: 'other_cottage',
     maxAdults: 4,
     minAdults: 1,
-    bedConfiguration: 'Double bed + two twin beds',
+    bedConfiguration: 'Double bed + twin beds',
     bathroomType: 'attached_western',
     status: 'active',
-    pricingTiersPaise: {
-      oneAdult: 300000,
-      twoAdults: 400000,
-      threeAdults: 540000,
-      fourAdults: 660000 // Valid on other cottage
-    },
-    features: ['Standalone cottage', 'Attached western bathroom', 'Hot water on request', 'Mango orchard outlook']
+    pricingTiers: { oneAdult: 3000, twoAdults: 4000, threeAdults: 5400, fourAdults: 6600 },
+    pricingTiersPaise: { oneAdult: 300000, twoAdults: 400000, threeAdults: 540000, fourAdults: 660000 },
+    features: ['Golden-yellow pillars', 'Sunrise rays outlook', 'Attached western bathroom', 'Veranda beneath leafy shade']
+  },
+  {
+    code: 'SA-01',
+    name: 'Spring Abode 1',
+    unitType: 'other_cottage',
+    maxAdults: 4,
+    minAdults: 1,
+    bedConfiguration: 'Double bed + twin beds',
+    bathroomType: 'attached_western',
+    status: 'active',
+    pricingTiers: { oneAdult: 3000, twoAdults: 4000, threeAdults: 5400, fourAdults: 6600 },
+    pricingTiersPaise: { oneAdult: 300000, twoAdults: 400000, threeAdults: 540000, fourAdults: 660000 },
+    features: ['Open green lawn outlook', 'Spacious sit-out veranda', 'Attached western bathroom', 'Family-friendly atmosphere']
+  },
+  {
+    code: 'GM-01',
+    name: 'Gulmohar',
+    unitType: 'red_white_cottage',
+    maxAdults: 3,
+    minAdults: 1,
+    bedConfiguration: 'Double bed + extra cot',
+    bathroomType: 'attached_western',
+    status: 'active',
+    pricingTiers: { oneAdult: 3000, twoAdults: 4000, threeAdults: 5400, fourAdults: null },
+    pricingTiersPaise: { oneAdult: 300000, twoAdults: 400000, threeAdults: 540000, fourAdults: null },
+    features: ['Warm red wooden walls', 'Yellow window frames', 'Elevated landscape outlook', 'Attached western bathroom']
+  },
+  {
+    code: 'AW-01',
+    name: 'Amberwood',
+    unitType: 'other_cottage',
+    maxAdults: 4,
+    minAdults: 1,
+    bedConfiguration: 'Double bed + twin beds',
+    bathroomType: 'attached_western',
+    status: 'active',
+    pricingTiers: { oneAdult: 3000, twoAdults: 4000, threeAdults: 5400, fourAdults: 6600 },
+    pricingTiersPaise: { oneAdult: 300000, twoAdults: 400000, threeAdults: 540000, fourAdults: 660000 },
+    features: ['Rustic wooden charm', 'Earth-toned decor', 'Dappled canopy shade', 'Attached western bathroom']
   },
   {
     code: 'TENT-A',
@@ -118,10 +133,8 @@ const unitsData = [
     bedConfiguration: 'Ground camping mattresses & sleeping gear',
     bathroomType: 'shared_block',
     status: 'active',
-    campingRatesPaise: {
-      perPerson: 149900,
-      couple: 299900 // Strictly 299900 (never 299800)
-    },
+    campingRates: { perPerson: 1499, couple: 2999 },
+    campingRatesPaise: { perPerson: 149900, couple: 299900 },
     features: ['Weatherproof canvas tent', 'Bonfire included', 'Riverfront lawn location', 'Clean shared washrooms']
   },
   {
@@ -133,10 +146,8 @@ const unitsData = [
     bedConfiguration: 'Ground camping mattresses & sleeping gear',
     bathroomType: 'shared_block',
     status: 'active',
-    campingRatesPaise: {
-      perPerson: 149900,
-      couple: 299900
-    },
+    campingRates: { perPerson: 1499, couple: 2999 },
+    campingRatesPaise: { perPerson: 149900, couple: 299900 },
     features: ['Weatherproof canvas tent', 'Bonfire included', 'Riverfront lawn location', 'Clean shared washrooms']
   }
 ];
