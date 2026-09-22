@@ -284,21 +284,24 @@ const seedDatabase = async () => {
     }
 
     // 2. Seed Default Owner Account
-    const defaultPassword = process.env.ADMIN_INITIAL_PASSWORD || 'Admin@Saranda1998';
+    const defaultPassword = process.env.ADMIN_INITIAL_PASSWORD;
     const existingOwner = await User.findOne({ email: 'owner@sarandasafariresort.com' });
     if (!existingOwner) {
-      await User.create({
-        name: 'Resort Administrator',
-        email: 'owner@sarandasafariresort.com',
-        password: defaultPassword,
-        role: 'owner',
-        isActive: true
-      });
-      console.log('[Seed]: Default Owner Administrator initialized.');
+      if (!defaultPassword) {
+        console.warn('[Seed Warning]: ADMIN_INITIAL_PASSWORD not set in environment. Skipping initial owner account creation. Use "npm run set-password -- owner@sarandasafariresort.com" to configure.');
+      } else {
+        await User.create({
+          name: 'Resort Administrator',
+          email: 'owner@sarandasafariresort.com',
+          password: defaultPassword,
+          role: 'owner',
+          isActive: true
+        });
+        console.log('[Seed]: Default Owner Administrator initialized.');
+      }
     } else {
       console.log('[Seed]: Owner account already exists.');
     }
-
     console.log('[Seed]: Database seeding completed successfully.');
     process.exit(0);
   } catch (err) {
