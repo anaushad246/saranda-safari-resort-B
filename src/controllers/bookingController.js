@@ -1,3 +1,4 @@
+import mongoose from 'mongoose';
 import crypto from 'crypto';
 import { Booking } from '../models/Booking.js';
 import { Unit } from '../models/Unit.js';
@@ -46,7 +47,51 @@ export const createBooking = asyncHandler(async (req, res) => {
     }
   }
 
-  const unit = await Unit.findById(unitId);
+  let unit = null;
+  if (mongoose.Types.ObjectId.isValid(unitId)) {
+    unit = await Unit.findById(unitId);
+  }
+  if (!unit) {
+    unit = await Unit.findOne({ code: String(unitId).toUpperCase() });
+  }
+  if (!unit) {
+    // Variety alias matching (e.g. cherry-blossom -> CB, riverwood -> RW)
+    const varietyMap = {
+      'riverwood': 'RW',
+      'cherry-blossom': 'CB',
+      'cherry_blossom': 'CB',
+      'autumn-abode': 'AA',
+      'autumn_abode': 'AA',
+      'spring-abode': 'SA',
+      'spring_abode': 'SA',
+      'amberwood': 'AW',
+      'gulmohar': 'GM',
+      'camping-tents': 'TENT',
+      'camping_tent': 'TENT'
+    };
+    const prefix = varietyMap[String(unitId).toLowerCase()];
+    if (prefix) {
+      const candidates = await Unit.find({
+        status: 'active',
+        code: new RegExp(`^${prefix}`, 'i')
+      }).sort({ code: 1 });
+
+      const isCamp = prefix === 'TENT';
+      const stayTimestamps = normalizeStayTimestamps(checkInDate, checkOutDate, isCamp);
+
+      for (const cand of candidates) {
+        const avail = await checkUnitAvailability(cand._id, stayTimestamps.checkIn, stayTimestamps.checkOut);
+        if (avail.available) {
+          unit = cand;
+          break;
+        }
+      }
+      if (!unit && candidates.length > 0) {
+        unit = candidates[0]; // will fail with a clear 409 unavailable below
+      }
+    }
+  }
+
   if (!unit) {
     throw new ApiError(404, 'Selected unit does not exist.');
   }
@@ -81,6 +126,12 @@ export const createBooking = asyncHandler(async (req, res) => {
   const randomSuffix = crypto.randomBytes(2).toString('hex').toUpperCase();
   const bookingReference = 'SSR-2026-' + randomSuffix;
 
+  // Configurable advance percentage (default 50% as approved by owner)
+  const advancePercent = parseInt(process.env.BOOKING_ADVANCE_PERCENTAGE, 10) || 50;
+  const totalPaise = quote.paise.grandTotal;
+  const advancePayablePaise = Math.round(totalPaise * (advancePercent / 100));
+  const balanceDuePaise = totalPaise - advancePayablePaise;
+
   // 4. Create Booking Document with permanent priceSnapshot
   const booking = await Booking.create({
     bookingReference,
@@ -106,9 +157,9 @@ export const createBooking = asyncHandler(async (req, res) => {
       childrenPaise: quote.paise.childrenTotal,
       nonVegPaise: quote.paise.nonVegTotal,
       bonfirePaise: quote.paise.bonfireTotal,
-      totalPaise: quote.paise.grandTotal,
-      advancePayablePaise: quote.paise.advancePayable,
-      balanceDuePaise: quote.paise.balanceDue
+      totalPaise,
+      advancePayablePaise,
+      balanceDuePaise
     },
     holdExpiresAt: isStaffBooking
       ? null
@@ -175,7 +226,14 @@ export const updateBookingStatus = asyncHandler(async (req, res) => {
 
   if (status) {
     booking.bookingStatus = status;
-    if (status === 'confirmed' || status === 'checked_in') {
+    if (status === 'confirmed') {
+      booking.holdExpiresAt = null;
+      if (!paymentStatus) booking.paymentStatus = 'advance_paid';
+    } else if (status === 'checked_in') {
+      booking.holdExpiresAt = null;
+    } else if (status === 'checked_out') {
+      if (!paymentStatus) booking.paymentStatus = 'fully_paid';
+    } else if (status === 'cancelled') {
       booking.holdExpiresAt = null;
     }
   }
