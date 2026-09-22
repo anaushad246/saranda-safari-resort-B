@@ -71,12 +71,12 @@ const run = async () => {
 
   await connectDB();
 
-  const user = await User.findOne({ email }).select('+password');
+  let user = await User.findOne({ email }).select('+password');
   if (!user) {
-    console.error(`[set-password] No account found for ${email}. Nothing changed.`);
-    process.exit(1);
+    console.log(`[set-password] No existing account found for ${email}. A new owner account will be created.`);
+  } else {
+    console.log(`[set-password] Account: ${user.email}  (role: ${user.role})`);
   }
-  console.log(`[set-password] Account: ${user.email}  (role: ${user.role})`);
 
   let password = process.env.NEW_ADMIN_PASSWORD || '';
   let confirmation = password;
@@ -99,10 +99,21 @@ const run = async () => {
     process.exit(1);
   }
 
-  user.password = password;
-  await user.save();
-
-  console.log(`[set-password] Password updated for ${user.email}.`);
+  if (!user) {
+    user = new User({
+      name: 'Resort Administrator',
+      email,
+      role: 'owner',
+      isActive: true,
+      password
+    });
+    await user.save();
+    console.log(`[set-password] Created new owner account for ${user.email}.`);
+  } else {
+    user.password = password;
+    await user.save();
+    console.log(`[set-password] Password updated for ${user.email}.`);
+  }
   console.log('[set-password] Tokens issued before now stay valid for up to 7 days.');
   console.log('[set-password] Rotate JWT_SECRET in the Render environment to invalidate them immediately.');
   process.exit(0);
