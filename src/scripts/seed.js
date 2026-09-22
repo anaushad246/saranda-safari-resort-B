@@ -2,6 +2,8 @@ import mongoose from 'mongoose';
 import dotenv from 'dotenv';
 import { Unit } from '../models/Unit.js';
 import { User } from '../models/User.js';
+import { Booking } from '../models/Booking.js';
+import { BlockedDate } from '../models/BlockedDate.js';
 import connectDB from '../db/index.js';
 
 dotenv.config();
@@ -202,7 +204,7 @@ const unitsData = [
     features: ['Rustic wooden charm', 'Earth-toned decor', 'Dappled canopy shade', 'Attached western bathroom']
   },
 
-  // 7. Wilderness Camping Tents (2 units, total 5 guests capacity)
+  // 7. Wilderness Camping Tents (2 units — Tent A holds 2 guests, Tent B holds 3)
   {
     code: 'TENT-A',
     name: 'Wilderness Camping Tent A',
@@ -246,6 +248,40 @@ const seedDatabase = async () => {
       );
     }
     console.log(`[Seed]: ${unitsData.length} units successfully populated (14 Cottages + 2 Camping Tents).`);
+
+    // 1b. Reconcile removals.
+    // The upsert above only ever creates or updates — it cannot retire a unit that this
+    // file stopped declaring, so old codes (LOG-01, OTHER-01, RW-02..04) survived every
+    // earlier re-seed and stayed `active`. Left alone they stay bookable and inflate the
+    // derived capacity in GET /api/v1/availability/capacity, which sums maxAdults across
+    // active units. Retiring them here keeps the DB equal to the declared inventory.
+    const declaredCodes = unitsData.map((u) => u.code);
+    const staleUnits = await Unit.find({ code: { $nin: declaredCodes } }).sort({ code: 1 });
+
+    if (!staleUnits.length) {
+      console.log('[Seed]: No undeclared units to reconcile.');
+    } else {
+      for (const stale of staleUnits) {
+        // Anything a booking or a block points at carries history, so retire it
+        // reversibly instead of orphaning those records.
+        const [bookingCount, blockCount] = await Promise.all([
+          Booking.countDocuments({ unitId: stale._id }),
+          BlockedDate.countDocuments({ unit: stale._id })
+        ]);
+
+        if (bookingCount || blockCount) {
+          stale.status = 'private_block';
+          await stale.save();
+          console.log(
+            `[Seed]: Retired ${stale.code} (${stale.name}) — referenced by ${bookingCount} booking(s) and ${blockCount} block(s).`
+          );
+        } else {
+          await stale.deleteOne();
+          console.log(`[Seed]: Removed undeclared unit ${stale.code} (${stale.name}).`);
+        }
+      }
+      console.log(`[Seed]: Reconciled ${staleUnits.length} undeclared unit(s).`);
+    }
 
     // 2. Seed Default Owner Account
     const defaultPassword = process.env.ADMIN_INITIAL_PASSWORD || 'Admin@Saranda1998';

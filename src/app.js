@@ -75,11 +75,29 @@ app.use((req, res, next) => {
 
 // Global Error Handler Middleware
 app.use((err, req, res, next) => {
-  const statusCode = err.statusCode || (err.message && err.message.includes('CORS') ? 403 : 500);
+  // A malformed :id (e.g. PATCH /units/pricing) reaches Mongoose as a cast failure, and an
+  // out-of-enum field value (e.g. a bad unit status) as a validation failure. Both are
+  // client errors rather than 500s, and the raw Mongoose text leaks schema detail.
+  const isCastError = err.name === 'CastError';
+  const isValidationError = err.name === 'ValidationError';
+
+  const statusCode = err.statusCode
+    || (isCastError || isValidationError ? 400 : (err.message && err.message.includes('CORS') ? 403 : 500));
+
+  let message = err.message || 'Internal Server Error';
+  if (isCastError) {
+    message = `Invalid identifier: ${err.value}`;
+  } else if (isValidationError) {
+    // Only route-level schema violations land here; Mongoose already writes a readable
+    // per-field message, so pass those through rather than restating them.
+    const fields = Object.values(err.errors || {}).map((e) => e.message).filter(Boolean);
+    if (fields.length) message = fields.join(' ');
+  }
+
   return res.status(statusCode).json({
     statusCode,
     success: false,
-    message: err.message || 'Internal Server Error',
+    message,
     errors: err.errors || [],
     data: null,
     stack: process.env.NODE_ENV === 'development' ? err.stack : undefined

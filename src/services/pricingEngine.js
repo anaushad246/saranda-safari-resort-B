@@ -26,24 +26,30 @@ export function calculatePriceQuote({
 
   const isCamping = effectiveUnitType === 'camping_tent';
 
-  // 1. Strict Unit-Type Capacity Guard
-  const isCherryBlossomOrGulmohar = 
-    effectiveUnitType === 'red_white_cottage' || 
-    unit?.code?.startsWith('CB-') || 
+  // 1. Strict Capacity Guard
+  // Per-unit only. There is deliberately no hardcoded category cap here (no fixed
+  // "5 for camping", no fixed property-wide number): the property-wide ceiling is
+  // the sum of maxAdults across units with status === 'active' (getActiveCapacity),
+  // so it moves automatically as inventory is added or taken out of service.
+  const isCherryBlossomOrGulmohar =
+    effectiveUnitType === 'red_white_cottage' ||
+    unit?.code?.startsWith('CB-') ||
     unit?.code?.startsWith('GM-');
 
   if (isCherryBlossomOrGulmohar) {
     if (parsedAdults > 3) {
       throw new Error('Capacity limitation: Cherry Blossom and Gulmohar strictly allow a maximum of 3 adults. For 4 adults, please select Riverwood, Autumn Abode, Spring Abode, or Amberwood.');
     }
-  } else if (isCamping) {
-    if (parsedAdults > 5) {
-      throw new Error('Camping capacity limitation: Maximum 5 overnight guests across the 2 camping tents.');
+  } else if (unit?.maxAdults) {
+    if (parsedAdults > unit.maxAdults) {
+      throw new Error(`Capacity limitation: ${unit.name} allows a maximum of ${unit.maxAdults} adults.`);
     }
   } else {
-    // 4-person cottages (Riverwood, Autumn Abode, Spring Abode, Amberwood)
-    if (parsedAdults > 4) {
-      throw new Error('Capacity limitation: This cottage allows a maximum of 4 adults.');
+    // No unit record resolved (unknown or unseeded unit type) - fall back to the
+    // largest unit of that kind: 3 adults for a tent, 4 for a cottage.
+    const fallbackCap = isCamping ? 3 : 4;
+    if (parsedAdults > fallbackCap) {
+      throw new Error(`Capacity limitation: this unit type allows a maximum of ${fallbackCap} adults.`);
     }
   }
 

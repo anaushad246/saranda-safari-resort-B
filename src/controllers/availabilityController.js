@@ -1,4 +1,4 @@
-import { getAllUnitsAvailability } from '../services/availabilityEngine.js';
+import { getAllUnitsAvailability, getActiveCapacity } from '../services/availabilityEngine.js';
 import { calculatePriceQuote } from '../services/pricingEngine.js';
 import { Unit } from '../models/Unit.js';
 import { asyncHandler } from '../utils/asyncHandler.js';
@@ -48,7 +48,10 @@ export const getQuote = asyncHandler(async (req, res) => {
   if (unitId) {
     unit = await Unit.findById(unitId);
   } else if (unitType) {
-    unit = await Unit.findOne({ unitType });
+    // Type-level quote: pick the most permissive unit of that type, so the quote
+    // is not artificially capped by whichever unit happens to sort first. (Only
+    // matters for camping, where Tent A = 2 adults and Tent B = 3.)
+    unit = await Unit.findOne({ unitType }).sort({ maxAdults: -1 });
   }
 
   const effectiveUnitType = unit?.unitType || unitType;
@@ -74,4 +77,12 @@ export const getQuote = asyncHandler(async (req, res) => {
   } catch (error) {
     throw new ApiError(400, error.message);
   }
+});
+
+export const getCapacity = asyncHandler(async (req, res) => {
+  const capacity = await getActiveCapacity();
+
+  return res.status(200).json(
+    new ApiResponse(200, capacity, 'Property capacity retrieved successfully')
+  );
 });

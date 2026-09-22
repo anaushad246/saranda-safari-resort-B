@@ -175,3 +175,34 @@ export async function getAllUnitsAvailability(checkInDateStr, checkOutDateStr, r
 
   return results;
 }
+
+/**
+ * Derived capacity of the property, computed from units currently marked active.
+ *
+ * This is the single source of truth for the overnight ceiling. It is never a
+ * hardcoded number, so it moves automatically as units are added, blocked
+ * (maintenance/renovation/private_block), or retired.
+ *
+ * Inactive units are already unbookable (see checkUnitAvailability / the
+ * isOperational flag in getAllUnitsAvailability) and every booking is capped at
+ * its own unit's maxAdults, so this total is the natural ceiling — it is exposed
+ * for display and admin visibility rather than as an extra runtime guard.
+ */
+export async function getActiveCapacity() {
+  const units = await Unit.find({ status: 'active' }).select('unitType maxAdults');
+
+  const isTent = (u) => u.unitType === 'camping_tent';
+  const sum = (list) => list.reduce((total, u) => total + (u.maxAdults || 0), 0);
+
+  const cottages = units.filter((u) => !isTent(u));
+  const tents = units.filter(isTent);
+
+  return {
+    activeUnits: units.length,
+    activeCottages: cottages.length,
+    activeTents: tents.length,
+    cottageAdults: sum(cottages),
+    tentAdults: sum(tents),
+    totalAdults: sum(units)
+  };
+}
