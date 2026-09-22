@@ -79,7 +79,7 @@ const bookingSchema = new mongoose.Schema({
   },
   bookingStatus: {
     type: String,
-    enum: ['pending', 'confirmed', 'checked_in', 'checked_out', 'cancelled', 'no_show'],
+    enum: ['pending', 'confirmed', 'checked_in', 'checked_out', 'cancelled', 'no_show', 'expired'],
     default: 'pending'
   },
   source: {
@@ -106,12 +106,20 @@ const bookingSchema = new mongoose.Schema({
   specialRequests: {
     type: String,
     trim: true
+  },
+  // Timestamp when pending inventory hold expires (null for confirmed/admin bookings)
+  holdExpiresAt: {
+    type: Date,
+    index: true,
+    default: null
   }
 }, {
   timestamps: true
 });
 
-// Compound index for quick date overlap conflict detection
+// Compound index for quick date overlap conflict detection & hold expiry
 bookingSchema.index({ unit: 1, checkIn: 1, checkOut: 1, bookingStatus: 1 });
+bookingSchema.index({ unit: 1, bookingStatus: 1, holdExpiresAt: 1, checkIn: 1, checkOut: 1 });
+bookingSchema.index({ 'guest.phone': 1, bookingStatus: 1, holdExpiresAt: 1 });
 
 export const Booking = mongoose.model('Booking', bookingSchema);

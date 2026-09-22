@@ -54,19 +54,29 @@ export async function checkUnitAvailability(unitId, checkInDate, checkOutDate) {
     };
   }
 
-  // 2. Check for conflicting active bookings
+  // 2. Check for conflicting active bookings (confirmed, checked_in, or active pending hold)
+  const now = new Date();
   const conflictingBooking = await Booking.findOne({
     unit: unitId,
-    bookingStatus: { $in: ['confirmed', 'checked_in'] },
     checkIn: { $lt: checkOutDate },
-    checkOut: { $gt: checkInDate }
+    checkOut: { $gt: checkInDate },
+    $or: [
+      { bookingStatus: { $in: ['confirmed', 'checked_in'] } },
+      {
+        bookingStatus: 'pending',
+        holdExpiresAt: { $gt: now }
+      }
+    ]
   });
 
   if (conflictingBooking) {
+    const isPendingHold = conflictingBooking.bookingStatus === 'pending';
     return {
       available: false,
       conflictType: 'booking',
-      reason: 'Unit is reserved for the selected date range.'
+      reason: isPendingHold
+        ? 'Unit is temporarily on hold awaiting advance payment confirmation.'
+        : 'Unit is reserved for the selected date range.'
     };
   }
 
@@ -104,20 +114,33 @@ export async function getAllUnitsAvailability(checkInDateStr, checkOutDateStr, r
   const cottageTimestamps = normalizeStayTimestamps(checkInDateStr, checkOutDateStr, false);
   const campingTimestamps = normalizeStayTimestamps(checkInDateStr, checkOutDateStr, true);
 
+  const now = new Date();
   // Fetch all overlapping bookings & blocks concurrently to optimize performance
   const [overlappingBookings, overlappingBlocks] = await Promise.all([
     Booking.find({
-      bookingStatus: { $in: ['confirmed', 'checked_in'] },
       checkIn: { $lt: cottageTimestamps.checkOut },
-      checkOut: { $gt: cottageTimestamps.checkIn }
-    }).select('unit checkIn checkOut'),
+      checkOut: { $gt: cottageTimestamps.checkIn },
+      $or: [
+        { bookingStatus: { $in: ['confirmed', 'checked_in'] } },
+        {
+          bookingStatus: 'pending',
+          holdExpiresAt: { $gt: now }
+        }
+      ]
+    }).select('unit checkIn checkOut bookingStatus holdExpiresAt'),
     BlockedDate.find({
       startDate: { $lt: cottageTimestamps.checkOut },
       endDate: { $gt: cottageTimestamps.checkIn }
     }).select('unit startDate endDate reason')
   ]);
 
-  const bookedUnitIdSet = new Set(overlappingBookings.map(b => String(b.unit)));
+  const bookedUnitMap = new Map();
+  overlappingBookings.forEach(b => {
+    const msg = b.bookingStatus === 'pending'
+      ? 'Unit is temporarily on hold awaiting advance payment confirmation.'
+      : 'Unit is already booked for these dates.';
+    bookedUnitMap.set(String(b.unit), msg);
+  });
   const wholePropertyBlock = overlappingBlocks.find(b => !b.unit);
   const blockedUnitMap = new Map();
   overlappingBlocks.forEach(b => {
@@ -147,8 +170,8 @@ export async function getAllUnitsAvailability(checkInDateStr, checkOutDateStr, r
       scheduleConflict = `Resort is closed for ${wholePropertyBlock.reason.replace('_', ' ')}.`;
     } else if (blockedUnitMap.has(String(unit._id))) {
       scheduleConflict = `Unit is blocked for ${blockedUnitMap.get(String(unit._id)).replace('_', ' ')}.`;
-    } else if (bookedUnitIdSet.has(String(unit._id))) {
-      scheduleConflict = 'Unit is already booked for these dates.';
+    } else if (bookedUnitMap.has(String(unit._id))) {
+      scheduleConflict = bookedUnitMap.get(String(unit._id));
     }
 
     const isAvailable = isOperational && capacityAllowed && !scheduleConflict;

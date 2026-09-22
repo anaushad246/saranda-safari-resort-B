@@ -27,6 +27,25 @@ export const createBooking = asyncHandler(async (req, res) => {
     throw new ApiError(400, 'Please provide unitId, checkInDate, checkOutDate, guest name, and phone.');
   }
 
+  const cleanPhone = guest.phone.trim();
+  const isStaffBooking = Boolean(req.user);
+
+  // Anti-hoarding protection: limit concurrent active pending holds per phone number for public visitors
+  if (!isStaffBooking) {
+    const activePhoneHolds = await Booking.countDocuments({
+      'guest.phone': cleanPhone,
+      bookingStatus: 'pending',
+      holdExpiresAt: { $gt: new Date() }
+    });
+    const maxActiveHolds = parseInt(process.env.MAX_ACTIVE_HOLDS_PER_PHONE, 10) || 1;
+    if (activePhoneHolds >= maxActiveHolds) {
+      throw new ApiError(
+        429,
+        'You already have an active pending reservation for this mobile number. Please complete payment for your existing booking or wait for the 2-hour hold window to expire.'
+      );
+    }
+  }
+
   const unit = await Unit.findById(unitId);
   if (!unit) {
     throw new ApiError(404, 'Selected unit does not exist.');
@@ -91,9 +110,12 @@ export const createBooking = asyncHandler(async (req, res) => {
       advancePayablePaise: quote.paise.advancePayable,
       balanceDuePaise: quote.paise.balanceDue
     },
-    paymentStatus: req.user ? 'advance_paid' : 'pending',
-    bookingStatus: req.user ? 'confirmed' : 'pending',
-    source: req.user ? 'admin_manual' : source,
+    holdExpiresAt: isStaffBooking
+      ? null
+      : new Date(Date.now() + (parseInt(process.env.BOOKING_HOLD_MINUTES, 10) || 120) * 60 * 1000),
+    paymentStatus: isStaffBooking ? 'advance_paid' : 'pending',
+    bookingStatus: isStaffBooking ? 'confirmed' : 'pending',
+    source: isStaffBooking ? 'admin_manual' : source,
     priceSnapshot: {
       unitName: unit.name,
       baseRateApplied: quote.inr.baseStayTotal,
@@ -151,7 +173,12 @@ export const updateBookingStatus = asyncHandler(async (req, res) => {
     throw new ApiError(404, 'Booking not found');
   }
 
-  if (status) booking.bookingStatus = status;
+  if (status) {
+    booking.bookingStatus = status;
+    if (status === 'confirmed' || status === 'checked_in') {
+      booking.holdExpiresAt = null;
+    }
+  }
   if (paymentStatus) booking.paymentStatus = paymentStatus;
 
   // Handle 100% full refund rule if cancelled by resort

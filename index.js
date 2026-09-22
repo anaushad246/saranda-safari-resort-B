@@ -11,7 +11,11 @@ const PORT = process.env.PORT || 5000;
 
 // 3. Connect to MongoDB, then launch HTTP server
 connectDB()
-  .then(() => {
+  .then(async () => {
+    // Start background hold sweeper for expired pending reservations
+    const { startHoldSweeper } = await import('./src/services/holdSweeper.js');
+    startHoldSweeper();
+
     const server = app.listen(PORT, () => {
       console.log(`[Saranda Safari Resort Server] Running on http://localhost:${PORT}`);
       console.log(`[Health Check] http://localhost:${PORT}/api/v1/health`);
