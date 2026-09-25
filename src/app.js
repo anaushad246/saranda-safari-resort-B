@@ -1,3 +1,4 @@
+import helmet from 'helmet';
 import express from 'express';
 import cors from 'cors';
 import cookieParser from 'cookie-parser';
@@ -10,6 +11,9 @@ import enquiryRouter from './routes/enquiryRoutes.js';
 import unitRouter from './routes/unitRoutes.js';
 
 const app = express();
+
+// Production Security Headers
+app.use(helmet());
 
 const rawAllowedOrigins = process.env.CORS_ORIGIN || process.env.CLIENT_URL || 'http://localhost:5173,http://localhost:5174';
 const allowedOrigins = rawAllowedOrigins

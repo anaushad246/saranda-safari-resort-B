@@ -28,7 +28,33 @@ export const createBooking = asyncHandler(async (req, res) => {
     throw new ApiError(400, 'Please provide unitId, checkInDate, checkOutDate, guest name, and phone.');
   }
 
-  const cleanPhone = guest.phone.trim();
+  // 1. Phone validation: 10-digit Indian mobile number
+  const rawDigits = guest.phone.replace(/\D/g, '');
+  const cleanPhone = rawDigits.slice(-10);
+  if (!/^[6-9]\d{9}$/.test(cleanPhone)) {
+    throw new ApiError(400, 'Please provide a valid 10-digit Indian mobile number (starting with 6, 7, 8, or 9).');
+  }
+
+  // 2. Date validations: no past dates, no dates before season launch (1 Oct 2026)
+  const todayMidnight = new Date();
+  todayMidnight.setHours(0, 0, 0, 0);
+
+  const checkInMidnight = new Date(checkInDate);
+  checkInMidnight.setHours(0, 0, 0, 0);
+
+  if (isNaN(checkInMidnight.getTime())) {
+    throw new ApiError(400, 'Invalid check-in date format.');
+  }
+
+  if (checkInMidnight < todayMidnight) {
+    throw new ApiError(400, 'Check-in date cannot be in the past.');
+  }
+
+  const seasonOpening = new Date('2026-10-01T00:00:00');
+  if (checkInMidnight < seasonOpening) {
+    throw new ApiError(400, 'Resort bookings open from 1st October 2026 season.');
+  }
+
   const isStaffBooking = Boolean(req.user);
 
   // Anti-hoarding protection: limit concurrent active pending holds per phone number for public visitors

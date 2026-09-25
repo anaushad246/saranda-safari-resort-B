@@ -26,6 +26,11 @@ export const login = asyncHandler(async (req, res) => {
     throw new ApiError(401, 'Invalid email or password.');
   }
 
+  // Strict Owner-Only Access Mandate: Reject any non-owner accounts at login
+  if (user.role !== 'owner') {
+    throw new ApiError(403, 'Access denied. The management portal is strictly restricted to Owner accounts.');
+  }
+
   const isMatch = await user.comparePassword(password);
   if (!isMatch) {
     throw new ApiError(401, 'Invalid email or password.');

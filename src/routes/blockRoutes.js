@@ -4,8 +4,8 @@ import { protect, authorize } from '../middleware/auth.js';
 
 const router = express.Router();
 
-router.post('/', protect, createBlock);
-router.get('/', protect, getBlocks);
+router.post('/', protect, authorize('owner'), createBlock);
+router.get('/', protect, authorize('owner'), getBlocks);
 router.delete('/:id', protect, authorize('owner'), deleteBlock);
 
 export default router;
