@@ -1,3 +1,4 @@
+import mongoose from 'mongoose';
 import helmet from 'helmet';
 import express from 'express';
 import cors from 'cors';
@@ -12,8 +13,13 @@ import unitRouter from './routes/unitRoutes.js';
 
 const app = express();
 
+// Trust reverse proxy headers (e.g. Render, Railway, Vercel, Cloudflare)
+app.set('trust proxy', 1);
+
 // Production Security Headers
-app.use(helmet());
+app.use(helmet({
+  crossOriginResourcePolicy: { policy: 'cross-origin' }
+}));
 
 const rawAllowedOrigins = process.env.CORS_ORIGIN || process.env.CLIENT_URL || 'http://localhost:5173,http://localhost:5174';
 const allowedOrigins = rawAllowedOrigins
@@ -51,9 +57,20 @@ app.get('/', (req, res) => {
 });
 
 app.get('/api/v1/health', (req, res) => {
-  res.status(200).json({
-    success: true,
-    status: 'healthy',
+  const dbState = mongoose.connection.readyState;
+  const isDbHealthy = dbState === 1;
+  const statusMap = {
+    0: 'disconnected',
+    1: 'connected',
+    2: 'connecting',
+    3: 'disconnecting'
+  };
+
+  return res.status(isDbHealthy ? 200 : 503).json({
+    success: isDbHealthy,
+    status: isDbHealthy ? 'healthy' : 'unhealthy',
+    database: statusMap[dbState] || 'unknown',
+    uptimeSeconds: Math.floor(process.uptime()),
     timestamp: new Date().toISOString()
   });
 });
