@@ -216,34 +216,93 @@ export const getBookingById = asyncHandler(async (req, res) => {
   );
 });
 
+// Strict state machine allowed transitions
+const VALID_TRANSITIONS = {
+  pending: ['confirmed', 'cancelled', 'expired'],
+  confirmed: ['checked_in', 'cancelled', 'no_show'],
+  checked_in: ['checked_out'],
+  checked_out: [],
+  cancelled: [],
+  expired: [],
+  no_show: []
+};
+
 export const updateBookingStatus = asyncHandler(async (req, res) => {
-  const { status, paymentStatus, cancellationReason, isResortCancellation } = req.body;
+  const { 
+    status, 
+    paymentStatus, 
+    cancellationReason, 
+    isResortCancellation, 
+    transactionReference,
+    reason,
+    note 
+  } = req.body;
+
   const booking = await Booking.findById(req.params.id);
 
   if (!booking) {
     throw new ApiError(404, 'Booking not found');
   }
 
-  if (status) {
-    booking.bookingStatus = status;
-    if (status === 'confirmed') {
+  const fromStatus = booking.bookingStatus;
+  const toStatus = status;
+
+  if (toStatus && toStatus !== fromStatus) {
+    const allowed = VALID_TRANSITIONS[fromStatus] || [];
+    if (!allowed.includes(toStatus)) {
+      throw new ApiError(
+        400,
+        `Invalid status transition: cannot move booking from '${fromStatus}' to '${toStatus}'. Allowed transitions from '${fromStatus}': [${allowed.join(', ') || 'none (terminal state)'}].`
+      );
+    }
+
+    booking.bookingStatus = toStatus;
+
+    if (toStatus === 'confirmed') {
       booking.holdExpiresAt = null;
       if (!paymentStatus) booking.paymentStatus = 'advance_paid';
-    } else if (status === 'checked_in') {
+    } else if (toStatus === 'checked_in') {
       booking.holdExpiresAt = null;
-    } else if (status === 'checked_out') {
+    } else if (toStatus === 'checked_out') {
       if (!paymentStatus) booking.paymentStatus = 'fully_paid';
-    } else if (status === 'cancelled') {
+    } else if (toStatus === 'cancelled' || toStatus === 'expired' || toStatus === 'no_show') {
       booking.holdExpiresAt = null;
     }
-  }
-  if (paymentStatus) booking.paymentStatus = paymentStatus;
 
-  // Handle 100% full refund rule if cancelled by resort
-  if (status === 'cancelled') {
+    const cleanTxRef = transactionReference ? String(transactionReference).trim() : null;
+    if (cleanTxRef) {
+      booking.transactionReference = cleanTxRef;
+    }
+
+    // Determine operator identity
+    const operator = req.user 
+      ? `${req.user.name || req.user.email || 'Admin'} (${req.user.role || 'Staff'})`
+      : (req.headers['x-operator'] || 'Staff Operator');
+
+    // Audit trail
+    if (!booking.statusHistory) {
+      booking.statusHistory = [];
+    }
+    booking.statusHistory.push({
+      fromStatus,
+      toStatus,
+      changedBy: operator,
+      changedAt: new Date(),
+      reason: cancellationReason || reason || null,
+      note: note || null,
+      transactionReference: cleanTxRef
+    });
+  }
+
+  if (paymentStatus) {
+    booking.paymentStatus = paymentStatus;
+  }
+
+  // Handle 100% full refund rule if cancelled by resort (owner approved)
+  if (toStatus === 'cancelled') {
     booking.cancellation = {
       cancelledAt: new Date(),
-      reason: cancellationReason || 'Cancelled',
+      reason: cancellationReason || reason || 'Cancelled by guest/staff',
       isResortCancellation: Boolean(isResortCancellation),
       refundPercentage: isResortCancellation ? 100 : 0,
       refundAmountPaise: isResortCancellation ? booking.financials.advancePayablePaise : 0
@@ -253,6 +312,6 @@ export const updateBookingStatus = asyncHandler(async (req, res) => {
   await booking.save();
 
   return res.status(200).json(
-    new ApiResponse(200, booking, 'Booking status updated')
+    new ApiResponse(200, booking, 'Booking status updated successfully')
   );
 });

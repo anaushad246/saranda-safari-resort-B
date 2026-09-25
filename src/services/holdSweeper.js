@@ -18,6 +18,15 @@ export async function sweepExpiredPendingHolds() {
       {
         $set: {
           bookingStatus: 'expired'
+        },
+        $push: {
+          statusHistory: {
+            fromStatus: 'pending',
+            toStatus: 'expired',
+            changedBy: 'System Hold Sweeper',
+            changedAt: now,
+            reason: '2-hour pending hold expired without advance payment'
+          }
         }
       }
     );

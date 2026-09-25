@@ -107,6 +107,22 @@ const bookingSchema = new mongoose.Schema({
     type: String,
     trim: true
   },
+  transactionReference: {
+    type: String,
+    trim: true,
+    default: null
+  },
+  statusHistory: [
+    {
+      fromStatus: { type: String, required: true },
+      toStatus: { type: String, required: true },
+      changedBy: { type: String, default: 'staff_admin' },
+      changedAt: { type: Date, default: Date.now },
+      reason: { type: String, default: null },
+      note: { type: String, default: null },
+      transactionReference: { type: String, default: null }
+    }
+  ],
   // Timestamp when pending inventory hold expires (null for confirmed/admin bookings)
   holdExpiresAt: {
     type: Date,
