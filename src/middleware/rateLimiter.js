@@ -15,7 +15,7 @@ export const bookingRateLimiter = rateLimit({
     return res.status(429).json({
       success: false,
       statusCode: 429,
-      message: 'Too many booking attempts from this network. Please wait a few minutes before trying again or contact resort desk directly at 9899373222.'
+      message: 'Too many booking attempts from this network. Please wait a few minutes before trying again or contact resort desk directly at 7008307064.'
     });
   }
 });

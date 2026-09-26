@@ -205,8 +205,18 @@ export const createBooking = asyncHandler(async (req, res) => {
     specialRequests
   });
 
+  const bookingData = booking.toObject ? booking.toObject() : { ...booking };
+  bookingData.paymentInstructions = {
+    upiVpa: process.env.RESORT_UPI_VPA || '',
+    phone: process.env.RESORT_PHONE || '7008307064',
+    accountNumber: process.env.RESORT_BANK_ACCOUNT || '',
+    ifsc: process.env.RESORT_BANK_IFSC || '',
+    beneficiaryName: process.env.RESORT_BANK_BENEFICIARY || 'Saranda Safari Resort',
+    bankName: process.env.RESORT_BANK_NAME || ''
+  };
+
   return res.status(201).json(
-    new ApiResponse(201, booking, 'Reservation created successfully')
+    new ApiResponse(201, bookingData, 'Reservation created successfully')
   );
 });
 

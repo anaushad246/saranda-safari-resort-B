@@ -3,8 +3,13 @@
 // Default sender. In development / testing on Resend free tier, onboarding@resend.dev is used
 // until a custom domain (e.g. sarandasafariresort.com) is verified on resend.com.
 const FROM_EMAIL = process.env.RESEND_FROM_EMAIL || 'Saranda Safari Resort <onboarding@resend.dev>';
-const RESORT_PHONE = '9899373222';
-const RESORT_LOCATION = 'Village Nimture, P.O. Bolani, Keonjhar, Odisha (Estd. 1998)';
+const RESORT_PHONE = process.env.RESORT_PHONE || '7008307064';
+const RESORT_BANK_ACCOUNT = process.env.RESORT_BANK_ACCOUNT || '';
+const RESORT_BANK_IFSC = process.env.RESORT_BANK_IFSC || '';
+const RESORT_BANK_BENEFICIARY = process.env.RESORT_BANK_BENEFICIARY || 'Saranda Safari Resort';
+const RESORT_BANK_NAME = process.env.RESORT_BANK_NAME || '';
+const RESORT_UPI_VPA = process.env.RESORT_UPI_VPA || '';
+const RESORT_LOCATION = 'Village Nimtur, P.O. Bolani, Keonjhar, Odisha (Estd. 1998)';
 
 function getResendClient() {
   const apiKey = process.env.RESEND_API_KEY;
@@ -28,6 +33,10 @@ function formatDate(d) {
   });
 }
 
+function getCheckInTime(booking) {
+  return booking.unitType === 'camping_tent' ? '4:00 PM' : '9:00 AM';
+}
+
 /**
  * 1. Send 2-Hour Reservation Hold Email (Pending Payment)
  */
@@ -45,6 +54,7 @@ export async function sendBookingHoldEmail(booking) {
     return { success: false, reason: 'no_email' };
   }
 
+  const checkInTime = getCheckInTime(booking);
   const checkInStr = formatDate(booking.checkIn);
   const checkOutStr = formatDate(booking.checkOut);
   const totalAmount = formatInr(booking.financials?.totalPaise);
@@ -87,7 +97,7 @@ export async function sendBookingHoldEmail(booking) {
         </div>
         <div class="body">
           <p style="margin-top: 0; font-size: 15px;">Dear <strong>${booking.guest?.name}</strong>,</p>
-          <p style="font-size: 14px; line-height: 1.5; color: #333;">Your reservation hold request has been placed successfully. Please complete the 50% advance payment within <strong>2 hours</strong> to secure your cottage.</p>
+          <p style="font-size: 14px; line-height: 1.5; color: #333;">Your reservation hold request has been placed successfully. Please complete the 50% advance payment within <strong>2 hours</strong> to secure your stay.</p>
 
           <div class="ref-box">
             <div class="ref-label">Booking Reference</div>
@@ -102,7 +112,7 @@ export async function sendBookingHoldEmail(booking) {
           <table class="details-table">
             <tr>
               <td class="label">Check-In Date</td>
-              <td class="val">${checkInStr} (9:00 AM)</td>
+              <td class="val">${checkInStr} (${checkInTime})</td>
             </tr>
             <tr>
               <td class="label">Check-Out Date</td>
@@ -130,15 +140,33 @@ export async function sendBookingHoldEmail(booking) {
             </tr>
           </table>
 
+          ${RESORT_UPI_VPA ? `
           <div class="payment-box">
             <h4>Payment Instructions (Direct UPI / Bank)</h4>
-            <p style="margin: 4px 0;"><strong>Official UPI VPA:</strong> <code>9899373222@okbizaxis</code> (or scan on website)</p>
+            <p style="margin: 4px 0;"><strong>Official UPI VPA:</strong> <code>${RESORT_UPI_VPA}</code></p>
+            ${RESORT_BANK_ACCOUNT ? `
+            <div style="margin: 8px 0; padding: 8px; background: #fff; border: 1px dashed #C5A059; border-radius: 6px; font-size: 12px;">
+              <strong>Bank Account Details (NEFT / IMPS):</strong><br>
+              • Account Number: <code>${RESORT_BANK_ACCOUNT}</code><br>
+              • IFSC Code: <code>${RESORT_BANK_IFSC}</code><br>
+              • Beneficiary Name: ${RESORT_BANK_BENEFICIARY}
+              ${RESORT_BANK_NAME ? `<br>• Bank: ${RESORT_BANK_NAME}` : ''}
+            </div>` : ''}
             <p style="margin: 4px 0;"><strong>WhatsApp Helpline:</strong> +91 ${RESORT_PHONE}</p>
             <p style="margin: 4px 0; color: #555; font-size: 12px;">After initiating transfer, share the payment screenshot with reference <strong>${booking.bookingReference}</strong> via WhatsApp for immediate verification.</p>
             <a href="https://wa.me/91${RESORT_PHONE}?text=Hello%20Saranda%20Safari%20Resort,%20I%20have%20transferred%2050%25%20advance%20for%20Booking%20${booking.bookingReference}.%20Sharing%20screenshot!" class="whatsapp-btn">
               Share Screenshot on WhatsApp (+91 ${RESORT_PHONE})
             </a>
-          </div>
+          </div>` : `
+          <div class="payment-box">
+            <h4>Payment & Verification Helpline</h4>
+            <p style="margin: 4px 0; font-size: 13px; color: #333;">To complete your 50% advance deposit (${advanceAmount}), please contact our resort team via WhatsApp or phone. Official account & UPI details will be provided directly.</p>
+            <p style="margin: 6px 0;"><strong>Resort Helpline:</strong> +91 ${RESORT_PHONE}</p>
+            <a href="https://wa.me/91${RESORT_PHONE}?text=Hello%20Saranda%20Safari%20Resort,%20I%20would%20like%20to%20pay%20the%2050%25%20advance%20deposit%20for%20Booking%20${booking.bookingReference}." class="whatsapp-btn">
+              Contact on WhatsApp for Payment Details (+91 ${RESORT_PHONE})
+            </a>
+          </div>`}
+
         </div>
         <div class="footer">
           ${RESORT_LOCATION} • Helpline: +91 ${RESORT_PHONE}
@@ -172,6 +200,7 @@ export async function sendBookingConfirmedEmail(booking) {
 
   if (!resend || !recipientEmail) return { success: false };
 
+  const checkInTime = getCheckInTime(booking);
   const checkInStr = formatDate(booking.checkIn);
   const checkOutStr = formatDate(booking.checkOut);
   const totalAmount = formatInr(booking.financials?.totalPaise);
@@ -227,7 +256,7 @@ export async function sendBookingConfirmedEmail(booking) {
           <table class="details-table">
             <tr>
               <td class="label">Check-In Date</td>
-              <td class="val">${checkInStr} (9:00 AM)</td>
+              <td class="val">${checkInStr} (${checkInTime})</td>
             </tr>
             <tr>
               <td class="label">Check-Out Date</td>
@@ -257,8 +286,7 @@ export async function sendBookingConfirmedEmail(booking) {
 
           <div style="background: #F4EFE6; border-radius: 8px; padding: 14px; font-size: 12px; color: #555; line-height: 1.5;">
             <strong>Check-In Instructions:</strong><br>
-            • Standard cottage check-in is 9:00 AM; check-out is 9:00 AM on departure morning.<br>
-            • Pure vegetarian breakfast, lunch, and dinner are included for 24-hr cottage stays.<br>
+            • Check-in is at ${checkInTime}; check-out is 9:00 AM on departure morning.<br>
             • Jio & Airtel mobile networks are available. High-speed Wi-Fi is not available to preserve the tranquil nature retreat experience.
           </div>
         </div>
@@ -316,7 +344,8 @@ export async function sendBookingCancelledEmail(booking, reason = 'Cancelled by 
         </div>
         <div class="body">
           <p>Dear <strong>${booking.guest?.name}</strong>,</p>
-          <p>This is to inform you that your reservation hold <strong>${booking.bookingReference}</strong> has been cancelled or has expired due to non-receipt of the advance payment within the 2-hour window.</p>
+          <p>This is to inform you that your reservation <strong>${booking.bookingReference}</strong> has been cancelled.</p>
+          <p style="font-size: 13px; color: #444; background: #FFF5F5; border-left: 3px solid #DC2626; padding: 10px; border-radius: 4px; margin: 16px 0;"><strong>Reason:</strong> ${reason}</p>
           <div class="ref-box">
             <span style="font-size: 11px; color: #888;">REFERENCE:</span><br>
             <strong style="font-size: 20px; color: #991B1B;">${booking.bookingReference}</strong>

@@ -52,7 +52,7 @@ app.get('/', (req, res) => {
   res.status(200).json({
     success: true,
     message: 'Saranda Safari Resort API is operational',
-    location: 'Village Nimture, P.O. Bolani, Keonjhar, Odisha (Estd. 1998)'
+    location: 'Village Nimtur, P.O. Bolani, Keonjhar, Odisha (Estd. 1998)'
   });
 });
 
