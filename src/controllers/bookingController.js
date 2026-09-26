@@ -7,6 +7,7 @@ import { calculatePriceQuote } from '../services/pricingEngine.js';
 import { asyncHandler } from '../utils/asyncHandler.js';
 import { ApiError } from '../utils/ApiError.js';
 import { ApiResponse } from '../utils/ApiResponse.js';
+import { sendBookingHoldEmail, sendBookingConfirmedEmail, sendBookingCancelledEmail } from '../services/emailService.js';
 
 export const createBooking = asyncHandler(async (req, res) => {
   const {
@@ -336,6 +337,17 @@ export const updateBookingStatus = asyncHandler(async (req, res) => {
   }
 
   await booking.save();
+
+  // Asynchronously send status notification emails to guest
+  if (toStatus === 'confirmed') {
+    sendBookingConfirmedEmail(booking).catch(err => {
+      console.error('[EmailService Error]:', err.message);
+    });
+  } else if (toStatus === 'cancelled') {
+    sendBookingCancelledEmail(booking, cancellationReason || reason).catch(err => {
+      console.error('[EmailService Error]:', err.message);
+    });
+  }
 
   return res.status(200).json(
     new ApiResponse(200, booking, 'Booking status updated successfully')
