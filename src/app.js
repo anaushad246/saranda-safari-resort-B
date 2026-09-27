@@ -56,6 +56,28 @@ app.get('/', (req, res) => {
   });
 });
 
+// Public Resort Configuration (Single Source of Truth from Environment)
+app.get('/api/v1/config/public', (req, res) => {
+  const phone = process.env.RESORT_PHONE || '7008307064';
+  const whatsapp = process.env.RESORT_WHATSAPP || process.env.RESORT_PHONE || '7008307064';
+  const email = process.env.RESORT_EMAIL || 'sarandasafariresort@gmail.com';
+  const upiVpa = process.env.RESORT_UPI_VPA || '';
+
+  return res.status(200).json({
+    success: true,
+    data: {
+      phone,
+      whatsapp,
+      email,
+      upiVpa,
+      bankAccount: process.env.RESORT_BANK_ACCOUNT || '',
+      bankIfsc: process.env.RESORT_BANK_IFSC || '',
+      bankBeneficiary: process.env.RESORT_BANK_BENEFICIARY || 'Saranda Safari Resort',
+      bankName: process.env.RESORT_BANK_NAME || ''
+    }
+  });
+});
+
 app.get('/api/v1/health', (req, res) => {
   const dbState = mongoose.connection.readyState;
   const isDbHealthy = dbState === 1;
