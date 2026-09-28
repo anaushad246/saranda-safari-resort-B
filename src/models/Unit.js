@@ -84,7 +84,7 @@ const unitSchema = new mongoose.Schema({
 });
 
 // Sync Rupees and Paise automatically before saving
-unitSchema.pre('save', function (next) {
+unitSchema.pre('save', function () {
   // Sync pricingTiers (Rupees) -> pricingTiersPaise
   if (this.pricingTiers) {
     if (!this.pricingTiersPaise) this.pricingTiersPaise = {};
@@ -122,7 +122,6 @@ unitSchema.pre('save', function (next) {
     }
   }
 
-  next();
 });
 
 export const Unit = mongoose.model('Unit', unitSchema);
