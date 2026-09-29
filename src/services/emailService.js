@@ -177,13 +177,17 @@ export async function sendBookingHoldEmail(booking) {
   `;
 
   try {
-    const data = await resend.emails.send({
+    const { data, error } = await resend.emails.send({
       from: FROM_EMAIL,
       to: [recipientEmail],
       subject: `Pending Hold: Reservation ${booking.bookingReference} — Saranda Safari Resort`,
       html
     });
-    console.log(`[EmailService]: Hold email sent to ${recipientEmail} for ${booking.bookingReference} (id: ${data.id})`);
+    if (error) {
+      console.error(`[EmailService Error]: Resend rejected email for ${booking.bookingReference}:`, error.message);
+      return { success: false, error: error.message };
+    }
+    console.log(`[EmailService]: Hold email sent to ${recipientEmail} for ${booking.bookingReference} (id: ${data?.id})`);
     return { success: true, data };
   } catch (err) {
     console.error(`[EmailService Error]: Failed to send hold email for ${booking.bookingReference}:`, err.message);
@@ -299,13 +303,17 @@ export async function sendBookingConfirmedEmail(booking) {
   `;
 
   try {
-    const data = await resend.emails.send({
+    const { data, error } = await resend.emails.send({
       from: FROM_EMAIL,
       to: [recipientEmail],
       subject: `Confirmed Voucher: Reservation ${booking.bookingReference} — Saranda Safari Resort`,
       html
     });
-    console.log(`[EmailService]: Confirmation voucher sent to ${recipientEmail} for ${booking.bookingReference} (id: ${data.id})`);
+    if (error) {
+      console.error(`[EmailService Error]: Resend rejected email for ${booking.bookingReference}:`, error.message);
+      return { success: false, error: error.message };
+    }
+    console.log(`[EmailService]: Confirmation voucher sent to ${recipientEmail} for ${booking.bookingReference} (id: ${data?.id})`);
     return { success: true, data };
   } catch (err) {
     console.error(`[EmailService Error]: Failed to send confirmation voucher for ${booking.bookingReference}:`, err.message);
@@ -361,13 +369,17 @@ export async function sendBookingCancelledEmail(booking, reason = 'Cancelled by 
   `;
 
   try {
-    const data = await resend.emails.send({
+    const { data, error } = await resend.emails.send({
       from: FROM_EMAIL,
       to: [recipientEmail],
       subject: `Reservation Notice: ${booking.bookingReference} Cancelled — Saranda Safari Resort`,
       html
     });
-    console.log(`[EmailService]: Cancellation email sent to ${recipientEmail} for ${booking.bookingReference} (id: ${data.id})`);
+    if (error) {
+      console.error(`[EmailService Error]: Resend rejected email for ${booking.bookingReference}:`, error.message);
+      return { success: false, error: error.message };
+    }
+    console.log(`[EmailService]: Cancellation email sent to ${recipientEmail} for ${booking.bookingReference} (id: ${data?.id})`);
     return { success: true, data };
   } catch (err) {
     console.error(`[EmailService Error]: Failed to send cancellation email for ${booking.bookingReference}:`, err.message);

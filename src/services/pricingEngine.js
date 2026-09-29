@@ -86,7 +86,7 @@ export function calculatePriceQuote({
     if (parsedAdults === 1) {
       baseRatePerNightPaise = getTierPaise('oneAdult', 3000); // ₹3,000
     } else if (parsedAdults === 2) {
-      baseRatePerNightPaise = getTierPaise('twoAdults', 4000); // ₹4,000
+      baseRatePerNightPaise = getTierPaise('twoAdults', 4500); // ₹4,000
     } else if (parsedAdults === 3) {
       baseRatePerNightPaise = getTierPaise('threeAdults', 5400); // ₹5,400
     } else if (parsedAdults === 4) {
@@ -158,7 +158,7 @@ export function calculatePriceQuote({
       bonfireTotal: Math.round(bonfireTotalPaise / 100),
       grandTotal: Math.round(grandTotalPaise / 100),
       advancePayable: Math.round(advancePayablePaise / 100),
-      balanceDue: Math.round(balanceDuePaise / 100)
+      balanceDue: Math.round(grandTotalPaise / 100) - Math.round(advancePayablePaise / 100)
     }
   };
 }
