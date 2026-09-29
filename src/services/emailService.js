@@ -2,7 +2,8 @@
 
 // Default sender. In development / testing on Resend free tier, onboarding@resend.dev is used
 // until a custom domain (e.g. sarandasafariresort.com) is verified on resend.com.
-const FROM_EMAIL = process.env.RESEND_FROM_EMAIL || 'Saranda Safari Resort <onboarding@resend.dev>';
+const FROM_EMAIL = process.env.RESEND_FROM_EMAIL || 'Saranda Safari Resort <bookings@sarandasafariresort.in>';
+const REPLY_TO_EMAIL = process.env.RESEND_REPLY_TO || 'sarandasafariresort@gmail.com';
 const RESORT_PHONE = process.env.RESORT_PHONE || '7008307064';
 const RESORT_BANK_ACCOUNT = process.env.RESORT_BANK_ACCOUNT || '';
 const RESORT_BANK_IFSC = process.env.RESORT_BANK_IFSC || '';
@@ -180,6 +181,7 @@ export async function sendBookingHoldEmail(booking) {
     const { data, error } = await resend.emails.send({
       from: FROM_EMAIL,
       to: [recipientEmail],
+      reply_to: REPLY_TO_EMAIL,
       subject: `Pending Hold: Reservation ${booking.bookingReference} — Saranda Safari Resort`,
       html
     });
@@ -306,6 +308,7 @@ export async function sendBookingConfirmedEmail(booking) {
     const { data, error } = await resend.emails.send({
       from: FROM_EMAIL,
       to: [recipientEmail],
+      reply_to: REPLY_TO_EMAIL,
       subject: `Confirmed Voucher: Reservation ${booking.bookingReference} — Saranda Safari Resort`,
       html
     });
@@ -372,6 +375,7 @@ export async function sendBookingCancelledEmail(booking, reason = 'Cancelled by 
     const { data, error } = await resend.emails.send({
       from: FROM_EMAIL,
       to: [recipientEmail],
+      reply_to: REPLY_TO_EMAIL,
       subject: `Reservation Notice: ${booking.bookingReference} Cancelled — Saranda Safari Resort`,
       html
     });
